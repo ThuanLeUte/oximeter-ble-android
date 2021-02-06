@@ -35,6 +35,8 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -44,6 +46,8 @@ import android.util.Log;
 
 
 public class MainActivity<LeDeviceListAdapter> extends AppCompatActivity {
+
+    private final static boolean TEMP_BOARD = true;
 
     private final static String TAG = "BLE";
     private String ble_device_address;
@@ -75,11 +79,15 @@ public class MainActivity<LeDeviceListAdapter> extends AppCompatActivity {
     UUID BATTERY_SERVICE_UUID = UUID.fromString("0000180f-0000-1000-8000-00805f9b34fb");
     UUID BATTERY_LEVEL_CHARACTERISTIC_UUID =  UUID.fromString("00002a19-0000-1000-8000-00805f9b34fb");
 
+    UUID BLOOD_OXYGEN_SERVICE_UUID = UUID.fromString("00001234-b38d-4985-720e-0f993a68ee41");
+    UUID BLOOD_OXYGEN_CHARACTERISTIC_UUID =  UUID.fromString("00001235-0000-1000-8000-00805f9b34fb");
+
     UUID HEART_RATE_SERVICE_UUID = UUID.fromString("00002234-b38d-4985-720e-0f993a68ee41");
     UUID HEART_RATE_CHARACTERISTIC_UUID =  UUID.fromString("00002235-0000-1000-8000-00805f9b34fb");
 
-    UUID TEMPERATURE_SERVICE_UUID = UUID.fromString("00001234-b38d-4985-720e-0f993a68ee41");
-    UUID TEMPERATURE_CHARACTERISTIC_UUID =  UUID.fromString("00001235-0000-1000-8000-00805f9b34fb");
+    UUID BODY_TEMPERATURE_SERVICE_UUID = UUID.fromString("00003234-b38d-4985-720e-0f993a68ee41");
+    UUID BODY_TEMPERATURE_CHARACTERISTIC_UUID =  UUID.fromString("00003235-0000-1000-8000-00805f9b34fb");
+
 
 
     @Override
@@ -101,6 +109,9 @@ public class MainActivity<LeDeviceListAdapter> extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 scanLeDevice();
+                btn_scan.setText("Scanning...");
+                ble_name.setText("Device: ");
+                ble_address.setText("Address: ");
             }
         });
 
@@ -158,13 +169,14 @@ public class MainActivity<LeDeviceListAdapter> extends AppCompatActivity {
             device = bluetoothAdapter.getRemoteDevice(result.getDevice().getAddress());
             Log.d(TAG, device.getName() + " " + device.getAddress());
             String device_1 = "Blood Oxygen";
-            String device_2 = "Temperature";
+            String device_2 = "Human Body Temperature";
             if (device.getName() != null) {
 
                 // Get name of Blood Oxygen project
                 if (device.getName().equals(device_1)) {
                     ble_name.setText("Device: " + device.getName());
                     ble_address.setText("Address: " +  device.getAddress());
+                    btn_scan.setText("Scan");
                     ble_device_address = device.getAddress();
                     bluetoothLeScanner.stopScan(leScanCallback);
                 }
@@ -172,6 +184,7 @@ public class MainActivity<LeDeviceListAdapter> extends AppCompatActivity {
                 if (device.getName().equals(device_2)) {
                     ble_name.setText("Device: " + device.getName());
                     ble_address.setText("Address: " +  device.getAddress());
+                    btn_scan.setText("Scan");
                     ble_device_address = device.getAddress();
                     bluetoothLeScanner.stopScan(leScanCallback);
                 }
@@ -257,8 +270,6 @@ public class MainActivity<LeDeviceListAdapter> extends AppCompatActivity {
                 // Attempts to discover services after successful connection.
                 Log.i(TAG, "Attempting to start service discovery:" + mBluetoothGatt.discoverServices());
 
-
-
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 intentAction = ACTION_GATT_DISCONNECTED;
 
@@ -272,7 +283,8 @@ public class MainActivity<LeDeviceListAdapter> extends AppCompatActivity {
 
         BluetoothGattCharacteristic battery_characteristic;
         BluetoothGattCharacteristic heart_rate_characteristic;
-        BluetoothGattCharacteristic temperature_characteristic;
+        BluetoothGattCharacteristic blood_oxygen_characteristic;
+        BluetoothGattCharacteristic body_temperature_characteristic;
         int index = 0;
 
         @Override
@@ -301,36 +313,59 @@ public class MainActivity<LeDeviceListAdapter> extends AppCompatActivity {
                 Log.i(TAG, "Battery characteristic found!");
                 setCharacteristicNotification(battery_characteristic, true);
 
-                // Heart Rate Service
-                BluetoothGattService heart_rate_service = mBluetoothGatt.getService(HEART_RATE_SERVICE_UUID);
-                if(heart_rate_service == null) {
-                    Log.i(TAG, "Heart Rate service not found!");
-                    return;
-                }
-                Log.i(TAG, "Heart Rate service found!");
+                if (false == TEMP_BOARD) {
+                    // Blood oxygen Service
+                    BluetoothGattService blood_oxygen_service = mBluetoothGatt.getService(BLOOD_OXYGEN_SERVICE_UUID);
+                    if (blood_oxygen_service == null) {
+                        Log.i(TAG, "Blood oxygen service not found!");
+                        return;
+                    }
+                    Log.i(TAG, "Blood oxygen service found!");
 
-                heart_rate_characteristic = heart_rate_service.getCharacteristic(HEART_RATE_CHARACTERISTIC_UUID);
-                if(heart_rate_characteristic == null) {
-                    Log.i(TAG, "Heart Rate characteristic not found!");
-                    return;
-                }
-                Log.i(TAG, String.format("Heart Rate characteristic found: %s", heart_rate_characteristic.getUuid().toString()));
+                    blood_oxygen_characteristic = blood_oxygen_service.getCharacteristic(BLOOD_OXYGEN_CHARACTERISTIC_UUID);
+                    if (blood_oxygen_characteristic == null) {
+                        Log.i(TAG, "Blood oxygen characteristic not found!");
+                        return;
+                    }
+                    Log.i(TAG, String.format("Blood oxygen characteristic found: %s", blood_oxygen_characteristic.getUuid().toString()));
 
-                // Temperature Service
-                BluetoothGattService temperature_service = mBluetoothGatt.getService(TEMPERATURE_SERVICE_UUID);
-                if(temperature_service == null) {
-                    Log.i(TAG, "Temperature service not found!");
-                    return;
-                }
-                Log.i(TAG, "Temperature service found!");
+                    // Heart Rate Service
+                    BluetoothGattService heart_rate_service = mBluetoothGatt.getService(HEART_RATE_SERVICE_UUID);
+                    if (heart_rate_service == null) {
+                        Log.i(TAG, "Heart Rate service not found!");
+                        return;
+                    }
+                    Log.i(TAG, "Heart Rate service found!");
 
-                temperature_characteristic = temperature_service.getCharacteristic(TEMPERATURE_CHARACTERISTIC_UUID);
-                if(temperature_characteristic == null) {
-                    Log.i(TAG, "Temperature characteristic not found!");
-                    return;
+                    heart_rate_characteristic = heart_rate_service.getCharacteristic(HEART_RATE_CHARACTERISTIC_UUID);
+                    if (heart_rate_characteristic == null) {
+                        Log.i(TAG, "Heart Rate characteristic not found!");
+                        return;
+                    }
+                    Log.i(TAG, String.format("Heart Rate characteristic found: %s", heart_rate_characteristic.getUuid().toString()));
                 }
-                Log.i(TAG, String.format("Temperature characteristic found: %s", temperature_characteristic.getUuid().toString()));
-                setCharacteristicNotification(temperature_characteristic, true);
+                else {
+                    // Body temperature Service
+                    BluetoothGattService temperature_service = mBluetoothGatt.getService(BODY_TEMPERATURE_SERVICE_UUID);
+                    if (temperature_service == null) {
+                        Log.i(TAG, "Body temperature service not found!");
+                        return;
+                    }
+                    Log.i(TAG, "Body temperature service found!");
+
+                    body_temperature_characteristic = temperature_service.getCharacteristic(BODY_TEMPERATURE_CHARACTERISTIC_UUID);
+                    if (body_temperature_characteristic == null) {
+                        Log.i(TAG, "Body temperature characteristic not found!");
+                        return;
+                    }
+                    Log.i(TAG, String.format("Body temperature characteristic found: %s", body_temperature_characteristic.getUuid().toString()));
+                    setCharacteristicNotification(body_temperature_characteristic, true);
+                }
+
+//                mBluetoothGatt.readCharacteristic(battery_characteristic);
+//                mBluetoothGatt.readCharacteristic(heart_rate_characteristic);
+//                mBluetoothGatt.readCharacteristic(temperature_characteristic);
+
 
             } else {
                 Log.w(TAG, "Services Discovered received: " + status);
@@ -358,12 +393,17 @@ public class MainActivity<LeDeviceListAdapter> extends AppCompatActivity {
         public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
             switch(index){
                 case 0:
-                    setCharacteristicNotification(heart_rate_characteristic, true);
+//                    setCharacteristicNotification(heart_rate_characteristic, true);
+                    setCharacteristicNotification(body_temperature_characteristic, true);
                     index = 1;
                     break;
                 case 1:
-                    setCharacteristicNotification(temperature_characteristic, true);
+//                    setCharacteristicNotification(body_temperature_characteristic, true);
                     index = 2;
+                    break;
+                case 2:
+//                    setCharacteristicNotification(blood_oxygen_characteristic, true);
+                    index = 3;
                     break;
                 default:
                     break;
@@ -384,39 +424,38 @@ public class MainActivity<LeDeviceListAdapter> extends AppCompatActivity {
         intent.putExtra(EXTRA_UUID, characteristic.getUuid().toString());
 
         // For all other profiles, writes the data formatted in HEX.
-        int flag = characteristic.getProperties();
-        int format = -1;
-        if ((flag & 0x01) != 0) {
-            format = BluetoothGattCharacteristic.FORMAT_UINT16;
-            Log.d(TAG, "Format UINT16.");
-        } else {
-            format = BluetoothGattCharacteristic.FORMAT_UINT8;
-            Log.d(TAG, "Format UINT8.");
-        }
-        final int data = characteristic.getIntValue(format, 0);
 
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 if (characteristic.getUuid().equals(BATTERY_LEVEL_CHARACTERISTIC_UUID))
                 {
-                    Log.d(TAG, "BATTERY_LEVEL_CHARACTERISTIC_UUID");
+                    Log.d(TAG, "BATTERY_LEVEL_CHARACTERISTIC");
+                    final int data = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0);
                     battery.setText("Battery: " + data);
+                    Log.d(TAG, String.format("Received value: %d", data));
+                }
+                else if (characteristic.getUuid().equals(BLOOD_OXYGEN_CHARACTERISTIC_UUID))
+                {
+                    Log.d(TAG, "BLOOD_OXYGEN_CHARACTERISTIC");
+//                    data_1.setText("Blood Oxygen: " + data);
                 }
                 else if (characteristic.getUuid().equals(HEART_RATE_CHARACTERISTIC_UUID))
                 {
                     Log.d(TAG, "HEART_RATE_CHARACTERISTIC");
-                    data_1.setText("Heart Rate: " + data);
+//                    data_2.setText("Heart Rate: " + data);
                 }
-                else if (characteristic.getUuid().equals(TEMPERATURE_CHARACTERISTIC_UUID))
+                else if (characteristic.getUuid().equals(BODY_TEMPERATURE_CHARACTERISTIC_UUID))
                 {
+                    final byte[] value = characteristic.getValue();
+                    float data = ByteBuffer.wrap(value).order(ByteOrder.LITTLE_ENDIAN).getFloat();
                     Log.d(TAG, "TEMPERATURE_CHARACTERISTIC");
-                    data_2.setText("Temperature: " + data);
+                    data_1.setText("Body Temperature: " + data);
+                    data_2.setText("");
+                    Log.d(TAG, String.format("Received value: %f", data));
                 }
             }
         });
-
-        Log.d(TAG, String.format("Received value: %d", data));
 
         sendBroadcast(intent);
     }
