@@ -44,10 +44,9 @@ import java.util.UUID;
 
 import android.util.Log;
 
-
 public class MainActivity<LeDeviceListAdapter> extends AppCompatActivity {
 
-    private final static boolean TEMP_BOARD = true;
+    private final static boolean TEMP_BOARD = false;
 
     private final static String TAG = "BLE";
     private String ble_device_address;
@@ -56,24 +55,24 @@ public class MainActivity<LeDeviceListAdapter> extends AppCompatActivity {
     private Button btn_scan, btn_connect;
     private TextView ble_name, ble_address;
     private TextView battery, manufacturer;
-    private TextView data_1, data_2;
+    private TextView data_1, data_2, data_3, data_4;
 
     private BluetoothAdapter bluetoothAdapter;
     private BluetoothDevice device;
     private BluetoothGatt mBluetoothGatt;
 
 
-    private int mConnectionState = STATE_DISCONNECTED;
+    private int mConnectionState                = STATE_DISCONNECTED;
     private static final int STATE_DISCONNECTED = 0;
-    private static final int STATE_CONNECTING = 1;
-    private static final int STATE_CONNECTED = 2;
+    private static final int STATE_CONNECTING   = 1;
+    private static final int STATE_CONNECTED    = 2;
 
-    public final static String ACTION_GATT_CONNECTED = "android.kaviles.bletutorial.Service_BTLE_GATT.ACTION_GATT_CONNECTED";
-    public final static String ACTION_GATT_DISCONNECTED = "android.kaviles.bletutorial.Service_BTLE_GATT.ACTION_GATT_DISCONNECTED";
+    public final static String ACTION_GATT_CONNECTED           = "android.kaviles.bletutorial.Service_BTLE_GATT.ACTION_GATT_CONNECTED";
+    public final static String ACTION_GATT_DISCONNECTED        = "android.kaviles.bletutorial.Service_BTLE_GATT.ACTION_GATT_DISCONNECTED";
     public final static String ACTION_GATT_SERVICES_DISCOVERED = "android.kaviles.bletutorial.Service_BTLE_GATT.ACTION_GATT_SERVICES_DISCOVERED";
-    public final static String ACTION_DATA_AVAILABLE = "android.kaviles.bletutorial.Service_BTLE_GATT.ACTION_DATA_AVAILABLE";
-    public final static String EXTRA_UUID = "android.kaviles.bletutorial.Service_BTLE_GATT.EXTRA_UUID";
-    public final static String EXTRA_DATA = "android.kaviles.bletutorial.Service_BTLE_GATT.EXTRA_DATA";
+    public final static String ACTION_DATA_AVAILABLE           = "android.kaviles.bletutorial.Service_BTLE_GATT.ACTION_DATA_AVAILABLE";
+    public final static String EXTRA_UUID                      = "android.kaviles.bletutorial.Service_BTLE_GATT.EXTRA_UUID";
+    public final static String EXTRA_DATA                      = "android.kaviles.bletutorial.Service_BTLE_GATT.EXTRA_DATA";
     private Object Utils;
 
     UUID BATTERY_SERVICE_UUID = UUID.fromString("0000180f-0000-1000-8000-00805f9b34fb");
@@ -81,14 +80,14 @@ public class MainActivity<LeDeviceListAdapter> extends AppCompatActivity {
 
     UUID BLOOD_OXYGEN_SERVICE_UUID = UUID.fromString("00001234-b38d-4985-720e-0f993a68ee41");
     UUID BLOOD_OXYGEN_CHARACTERISTIC_UUID =  UUID.fromString("00001235-0000-1000-8000-00805f9b34fb");
+    UUID R_DATA_CHARACTERISTIC_UUID =  UUID.fromString("00001236-0000-1000-8000-00805f9b34fb");
+    UUID IR_DATA_CHARACTERISTIC_UUID =  UUID.fromString("00001237-0000-1000-8000-00805f9b34fb");
 
     UUID HEART_RATE_SERVICE_UUID = UUID.fromString("00002234-b38d-4985-720e-0f993a68ee41");
     UUID HEART_RATE_CHARACTERISTIC_UUID =  UUID.fromString("00002235-0000-1000-8000-00805f9b34fb");
 
     UUID BODY_TEMPERATURE_SERVICE_UUID = UUID.fromString("00003234-b38d-4985-720e-0f993a68ee41");
     UUID BODY_TEMPERATURE_CHARACTERISTIC_UUID =  UUID.fromString("00003235-0000-1000-8000-00805f9b34fb");
-
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -102,8 +101,23 @@ public class MainActivity<LeDeviceListAdapter> extends AppCompatActivity {
         battery = (TextView) (findViewById(R.id.battery));
         data_1 = (TextView) (findViewById(R.id.data_1));
         data_2 = (TextView) (findViewById(R.id.data_2));
-        manufacturer = (TextView) (findViewById(R.id.manufacturer));
+        data_3 = (TextView) (findViewById(R.id.data_3));
+        data_4 = (TextView) (findViewById(R.id.data_4));
 
+        if (false == TEMP_BOARD)
+        {
+            data_1.setText("Blood Oxygen:");
+            data_2.setText("Heart Rate: ");
+            data_3.setText("R data: ");
+            data_4.setText("IR data: ");
+        }
+        else
+        {
+            data_1.setText("Body Temperature: ");
+            data_2.setText("");
+            data_3.setText("");
+            data_4.setText("");
+        }
 
         btn_scan.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -160,8 +174,6 @@ public class MainActivity<LeDeviceListAdapter> extends AppCompatActivity {
         }
     }
 
-
-
     // Device scan callback.
     private ScanCallback leScanCallback = new ScanCallback() {
         @Override
@@ -180,6 +192,7 @@ public class MainActivity<LeDeviceListAdapter> extends AppCompatActivity {
                     ble_device_address = device.getAddress();
                     bluetoothLeScanner.stopScan(leScanCallback);
                 }
+
                 // Get name of Temperature project
                 if (device.getName().equals(device_2)) {
                     ble_name.setText("Device: " + device.getName());
@@ -284,6 +297,8 @@ public class MainActivity<LeDeviceListAdapter> extends AppCompatActivity {
         BluetoothGattCharacteristic battery_characteristic;
         BluetoothGattCharacteristic heart_rate_characteristic;
         BluetoothGattCharacteristic blood_oxygen_characteristic;
+        BluetoothGattCharacteristic r_data_characteristic;
+        BluetoothGattCharacteristic ir_data_characteristic;
         BluetoothGattCharacteristic body_temperature_characteristic;
         int index = 0;
 
@@ -322,12 +337,29 @@ public class MainActivity<LeDeviceListAdapter> extends AppCompatActivity {
                     }
                     Log.i(TAG, "Blood oxygen service found!");
 
+                    // Blood oxygen Charicterictic
                     blood_oxygen_characteristic = blood_oxygen_service.getCharacteristic(BLOOD_OXYGEN_CHARACTERISTIC_UUID);
                     if (blood_oxygen_characteristic == null) {
                         Log.i(TAG, "Blood oxygen characteristic not found!");
                         return;
                     }
                     Log.i(TAG, String.format("Blood oxygen characteristic found: %s", blood_oxygen_characteristic.getUuid().toString()));
+
+                    // r data Charicterictic
+                    r_data_characteristic = blood_oxygen_service.getCharacteristic(R_DATA_CHARACTERISTIC_UUID);
+                    if (r_data_characteristic == null) {
+                        Log.i(TAG, "r data characteristic not found!");
+                        return;
+                    }
+                    Log.i(TAG, String.format("r data characteristic found: %s", blood_oxygen_characteristic.getUuid().toString()));
+
+                    // ir data Charicterictic
+                    ir_data_characteristic = blood_oxygen_service.getCharacteristic(IR_DATA_CHARACTERISTIC_UUID);
+                    if (ir_data_characteristic == null) {
+                        Log.i(TAG, "ir data characteristic not found!");
+                        return;
+                    }
+                    Log.i(TAG, String.format("ir data characteristic found: %s", blood_oxygen_characteristic.getUuid().toString()));
 
                     // Heart Rate Service
                     BluetoothGattService heart_rate_service = mBluetoothGatt.getService(HEART_RATE_SERVICE_UUID);
@@ -366,7 +398,6 @@ public class MainActivity<LeDeviceListAdapter> extends AppCompatActivity {
 //                mBluetoothGatt.readCharacteristic(heart_rate_characteristic);
 //                mBluetoothGatt.readCharacteristic(temperature_characteristic);
 
-
             } else {
                 Log.w(TAG, "Services Discovered received: " + status);
             }
@@ -393,18 +424,36 @@ public class MainActivity<LeDeviceListAdapter> extends AppCompatActivity {
         public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
             switch(index){
                 case 0:
-//                    setCharacteristicNotification(heart_rate_characteristic, true);
-                    setCharacteristicNotification(body_temperature_characteristic, true);
-                    index = 1;
+                {
+                    if (false == TEMP_BOARD)
+                    {
+                        setCharacteristicNotification(heart_rate_characteristic, true);
+                        index = 1;
+                    }
+                    else
+                    {
+                        setCharacteristicNotification(body_temperature_characteristic, true);
+                    }
                     break;
+                }
                 case 1:
-//                    setCharacteristicNotification(body_temperature_characteristic, true);
+                {
+                    setCharacteristicNotification(blood_oxygen_characteristic, true);
                     index = 2;
                     break;
+                }
                 case 2:
-//                    setCharacteristicNotification(blood_oxygen_characteristic, true);
+                {
+                    setCharacteristicNotification(r_data_characteristic, true);
                     index = 3;
                     break;
+                }
+                case 3:
+                {
+                    setCharacteristicNotification(ir_data_characteristic, true);
+                    index = 4;
+                    break;
+                }
                 default:
                     break;
             }
@@ -424,7 +473,6 @@ public class MainActivity<LeDeviceListAdapter> extends AppCompatActivity {
         intent.putExtra(EXTRA_UUID, characteristic.getUuid().toString());
 
         // For all other profiles, writes the data formatted in HEX.
-
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -438,12 +486,26 @@ public class MainActivity<LeDeviceListAdapter> extends AppCompatActivity {
                 else if (characteristic.getUuid().equals(BLOOD_OXYGEN_CHARACTERISTIC_UUID))
                 {
                     Log.d(TAG, "BLOOD_OXYGEN_CHARACTERISTIC");
-//                    data_1.setText("Blood Oxygen: " + data);
+                    final int data = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0);
+                    data_1.setText("Blood Oxygen: " + data);
+                }
+                else if (characteristic.getUuid().equals(R_DATA_CHARACTERISTIC_UUID))
+                {
+                    Log.d(TAG, "R_DATA_CHARACTERISTIC");
+                    final int data = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0);
+                    data_3.setText("R data: " + data);
+                }
+                else if (characteristic.getUuid().equals(IR_DATA_CHARACTERISTIC_UUID))
+                {
+                    Log.d(TAG, "IR_DATA_CHARACTERISTIC");
+                    final int data = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0);
+                    data_4.setText("IR data: " + data);
                 }
                 else if (characteristic.getUuid().equals(HEART_RATE_CHARACTERISTIC_UUID))
                 {
                     Log.d(TAG, "HEART_RATE_CHARACTERISTIC");
-//                    data_2.setText("Heart Rate: " + data);
+                    final int data = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0);
+                    data_2.setText("Heart Rate: " + data);
                 }
                 else if (characteristic.getUuid().equals(BODY_TEMPERATURE_CHARACTERISTIC_UUID))
                 {
@@ -487,5 +549,4 @@ public class MainActivity<LeDeviceListAdapter> extends AppCompatActivity {
 
         mBluetoothGatt.writeDescriptor(descriptor);
     }
-
 }
